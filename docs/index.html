@@ -42,7 +42,15 @@
     color: transparent;
   }
 
-  .subtitle { color: var(--text-soft); font-size: 14px; margin-bottom: 28px; font-weight: 500; }
+  .subtitle { color: var(--text-soft); font-size: 14px; margin-bottom: 6px; font-weight: 500; }
+
+  .dedication {
+    font-family: 'Caveat', cursive;
+    font-size: 17px;
+    color: var(--text-soft);
+    margin-bottom: 26px;
+    opacity: 0.8;
+  }
 
   #setup-screen {
     display: flex;
@@ -124,6 +132,7 @@
   }
 
   .voice-controls { text-align: center; margin-bottom: 14px; }
+
   #mic-btn {
     width: auto;
     display: inline-block;
@@ -134,6 +143,7 @@
     border: 2px solid var(--purple-soft);
     box-shadow: none;
   }
+
   #mic-btn:hover { transform: none; box-shadow: none; background: var(--purple-soft); }
 
   .cameras {
@@ -169,25 +179,23 @@
     white-space: nowrap;
   }
 
-  .countdown-overlay {
+  /* Small pill in top-right, no overlay, no dimming */
+  .countdown-pill {
     position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 100px;
-    font-weight: 700;
+    top: 10px;
+    right: 10px;
+    background: rgba(124, 77, 255, 0.85);
     color: white;
-    text-shadow: 0 2px 16px rgba(0,0,0,0.5);
-    background: rgba(58, 46, 77, 0.28);
-    opacity: 0;
-    transition: opacity 0.2s;
-    pointer-events: none;
+    font-size: 22px;
+    font-weight: 700;
+    padding: 4px 13px;
+    border-radius: 999px;
+    display: none;
+    font-family: 'Quicksand', sans-serif;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
   }
 
-  .countdown-overlay.visible { opacity: 1; animation: pulse 1s ease-in-out; }
-
-  #booth-controls { display: block; }
+  .countdown-pill.visible { display: block; animation: pulse 1s ease-in-out; }
 
   .thumb-row {
     display: grid;
@@ -291,13 +299,13 @@
     box-shadow: none;
   }
   #restart-btn:hover { background: var(--purple-soft); }
-  #save-status { margin-top: 8px; }
 
   .gallery-section {
     width: 100%;
     max-width: 760px;
     margin-top: 36px;
   }
+
   .gallery-section h2 {
     font-size: 18px;
     font-weight: 700;
@@ -305,11 +313,13 @@
     margin-bottom: 14px;
     text-align: center;
   }
+
   .gallery-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 16px;
   }
+
   .gallery-card {
     background: #fff;
     border-radius: 16px;
@@ -320,6 +330,7 @@
     align-items: center;
     gap: 8px;
   }
+
   .gallery-card img {
     width: 100%;
     max-height: 220px;
@@ -327,8 +338,11 @@
     border-radius: 8px;
     background: var(--purple-soft);
   }
+
   .gallery-date { font-size: 11px; color: var(--text-soft); font-weight: 600; text-align: center; }
+
   .gallery-actions { display: flex; gap: 8px; width: 100%; }
+
   .gallery-actions button, .gallery-actions a {
     flex: 1;
     width: auto;
@@ -343,6 +357,7 @@
     border: none;
     box-shadow: none;
   }
+
   .gallery-download { background: var(--green-soft); color: var(--green-dark); }
   .gallery-delete { background: #fde7ea; color: #c2455a; }
 
@@ -362,6 +377,7 @@
 
 <h1>Our Photobooth</h1>
 <p class="subtitle">A little moment, just for us</p>
+<p class="dedication">From Dave, dedicated to Jazz.</p>
 
 <div id="setup-screen">
   <input type="text" id="name-input" placeholder="Your name" />
@@ -381,19 +397,19 @@
   <div class="status-bar" id="status-bar">Waiting for partner...</div>
   <div class="big-countdown" id="big-countdown"></div>
 
-  <div class="voice-controls">
+  <div class="voice-controls" id="voice-controls" style="display:none;">
     <button id="mic-btn">Mute mic</button>
   </div>
 
   <div class="cameras">
     <div class="cam-box">
       <video id="local-video" autoplay muted playsinline></video>
-      <div class="countdown-overlay" id="local-countdown"></div>
+      <div class="countdown-pill" id="local-pill"></div>
       <div class="cam-label" id="local-label">You</div>
     </div>
     <div class="cam-box">
       <video id="remote-video" autoplay playsinline></video>
-      <div class="countdown-overlay" id="remote-countdown"></div>
+      <div class="countdown-pill" id="remote-pill"></div>
       <div class="cam-label" id="remote-label">Partner</div>
     </div>
   </div>
@@ -405,7 +421,6 @@
       <div class="thumb" id="slot-2"><div class="slot-num">3</div></div>
       <div class="thumb" id="slot-3"><div class="slot-num">4</div></div>
     </div>
-
     <div class="controls">
       <button id="start-btn" disabled>Waiting for partner...</button>
     </div>
@@ -438,7 +453,7 @@
   </div>
 </div>
 
-<div class="version-tag">v1.5.0</div>
+<div class="version-tag">v1.6.0</div>
 
 <script>
   const SERVER_URL = 'https://photobooth-apqx.onrender.com'; // keep your existing Render URL here
@@ -459,6 +474,7 @@
   let pendingChainTimeout = null;
   let borderColor = '#f0e9ff';
   let micOn = true;
+  let hasMic = false;
 
   const ICE_SERVERS = {
     iceServers: [
@@ -468,25 +484,26 @@
     ]
   };
 
-  const setupScreen = document.getElementById('setup-screen');
-  const mainApp = document.getElementById('main-app');
-  const boothControls = document.getElementById('booth-controls');
-  const stripEditor = document.getElementById('strip-editor');
-  const joinBtn = document.getElementById('join-btn');
-  const startBtn = document.getElementById('start-btn');
-  const micBtn = document.getElementById('mic-btn');
-  const statusBar = document.getElementById('status-bar');
-  const bigCountdown = document.getElementById('big-countdown');
-  const localVideo = document.getElementById('local-video');
-  const remoteVideo = document.getElementById('remote-video');
-  const localCountdown = document.getElementById('local-countdown');
-  const remoteCountdown = document.getElementById('remote-countdown');
-  const localLabel = document.getElementById('local-label');
-  const remoteLabel = document.getElementById('remote-label');
-  const stripCanvas = document.getElementById('strip-canvas');
-  const captionInput = document.getElementById('caption-input');
-  const saveStatus = document.getElementById('save-status');
-  const galleryGrid = document.getElementById('gallery-grid');
+  const setupScreen    = document.getElementById('setup-screen');
+  const mainApp        = document.getElementById('main-app');
+  const boothControls  = document.getElementById('booth-controls');
+  const stripEditor    = document.getElementById('strip-editor');
+  const joinBtn        = document.getElementById('join-btn');
+  const startBtn       = document.getElementById('start-btn');
+  const micBtn         = document.getElementById('mic-btn');
+  const voiceControls  = document.getElementById('voice-controls');
+  const statusBar      = document.getElementById('status-bar');
+  const bigCountdown   = document.getElementById('big-countdown');
+  const localVideo     = document.getElementById('local-video');
+  const remoteVideo    = document.getElementById('remote-video');
+  const localPill      = document.getElementById('local-pill');
+  const remotePill     = document.getElementById('remote-pill');
+  const localLabel     = document.getElementById('local-label');
+  const remoteLabel    = document.getElementById('remote-label');
+  const stripCanvas    = document.getElementById('strip-canvas');
+  const captionInput   = document.getElementById('caption-input');
+  const saveStatus     = document.getElementById('save-status');
+  const galleryGrid    = document.getElementById('gallery-grid');
 
   function getServerNow() { return Date.now() + clockOffset; }
 
@@ -517,7 +534,7 @@
     });
   }
 
-  // --- Gallery on the landing page ---
+  // --- Gallery ---
   function loadGallery() {
     galleryGrid.innerHTML = '<p class="hint">Loading your memories...</p>';
     fetch(`${HTTP_URL}/strips`)
@@ -552,19 +569,32 @@
 
   loadGallery();
 
-  // --- Joining the room ---
+  // --- Join ---
   joinBtn.addEventListener('click', async () => {
     myName = document.getElementById('name-input').value.trim() || 'You';
     const room = document.getElementById('room-input').value.trim() || 'ourroom';
 
+    // Camera is required
     try {
-      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      localVideo.srcObject = localStream;
-      localLabel.textContent = myName;
+      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
     } catch (e) {
-      alert('Could not access camera/microphone. Please allow permission.');
+      alert('Could not access camera. Please allow camera permission.');
       return;
     }
+
+    // Microphone is optional — if denied we just continue without it
+    try {
+      const micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      micStream.getAudioTracks().forEach(track => localStream.addTrack(track));
+      hasMic = true;
+      voiceControls.style.display = 'block';
+    } catch (e) {
+      hasMic = false;
+      voiceControls.style.display = 'none';
+    }
+
+    localVideo.srcObject = localStream;
+    localLabel.textContent = myName;
 
     ws = new WebSocket(SERVER_URL);
 
@@ -666,7 +696,9 @@
     pc = new RTCPeerConnection(ICE_SERVERS);
     localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
     pc.ontrack = (e) => { remoteVideo.srcObject = e.streams[0]; };
-    pc.onicecandidate = (e) => { if (e.candidate) ws.send(JSON.stringify({ type: 'ice', candidate: e.candidate })); };
+    pc.onicecandidate = (e) => {
+      if (e.candidate) ws.send(JSON.stringify({ type: 'ice', candidate: e.candidate }));
+    };
   }
 
   async function createOffer() {
@@ -702,8 +734,8 @@
 
     currentSlot = slot;
     updateSlotHighlight();
-    localCountdown.classList.add('visible');
-    remoteCountdown.classList.add('visible');
+    localPill.classList.add('visible');
+    remotePill.classList.add('visible');
 
     let lastShown = null;
     activeCountdownInterval = setInterval(() => {
@@ -712,15 +744,15 @@
       if (remaining <= 0) {
         clearInterval(activeCountdownInterval);
         activeCountdownInterval = null;
-        localCountdown.classList.remove('visible');
-        remoteCountdown.classList.remove('visible');
+        localPill.classList.remove('visible');
+        remotePill.classList.remove('visible');
         bigCountdown.classList.remove('visible');
         capturePhoto(slot, chained);
       } else if (remaining !== lastShown) {
         lastShown = remaining;
-        localCountdown.textContent = remaining;
-        remoteCountdown.textContent = remaining;
-        [localCountdown, remoteCountdown].forEach(el => {
+        localPill.textContent = remaining;
+        remotePill.textContent = remaining;
+        [localPill, remotePill].forEach(el => {
           el.classList.remove('visible'); void el.offsetWidth; el.classList.add('visible');
         });
         bigCountdown.textContent = remaining;
@@ -739,6 +771,20 @@
     photos[slot] = dataUrl;
     ws.send(JSON.stringify({ type: 'remote_photo', slot, dataUrl }));
     checkSlotMerge(slot);
+
+    // After a retake (chained=false), check if there are later slots still empty
+    // and auto-chain into them; otherwise the session would stall
+    if (sessionDriver && !chained) {
+      const nextEmpty = photos.findIndex((p, i) => i > slot && p === null);
+      if (nextEmpty !== -1) {
+        pendingChainTimeout = setTimeout(() => {
+          pendingChainTimeout = null;
+          triggerCountdown(nextEmpty, false);
+        }, 2000);
+      }
+      // If no empty slots remain, checkSlotMerge will handle moving to the strip
+      return;
+    }
 
     if (sessionDriver && chained && slot < 3) {
       pendingChainTimeout = setTimeout(() => {
@@ -777,7 +823,7 @@
         mergedPhotos[slot] = url;
         const thumb = document.getElementById(`slot-${slot}`);
         thumb.innerHTML = `<img src="${url}"><button class="retake-btn" onclick="retakeSlot(${slot})">Retake</button>`;
-        if (slot === 3 && mergedPhotos.every(p => p)) {
+        if (mergedPhotos.every(p => p)) {
           setTimeout(showStrip, 700);
         }
       });
@@ -810,7 +856,6 @@
     });
   }
 
-  // --- Strip screen (cameras stay visible above this the whole time) ---
   function showStrip() {
     boothControls.style.display = 'none';
     stripEditor.style.display = 'block';
