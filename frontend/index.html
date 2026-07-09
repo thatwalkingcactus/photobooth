@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Our Photobooth</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Georgia, serif;
+      background: #fdf6ee;
+      color: #3a2e2e;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+    }
+
+    h1 { font-size: 28px; margin-bottom: 4px; }
+    .subtitle { color: #9a7e6f; font-size: 14px; margin-bottom: 24px; }
+
+    /* --- Setup screen --- */
+    #setup-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      max-width: 360px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1.5px solid #e0cfc4;
+      border-radius: 12px;
+      background: #fff;
+      font-size: 16px;
+      font-family: Georgia, serif;
+      color: #3a2e2e;
+      outline: none;
+    }
+
+    input[type="text"]:focus { border-color: #c4956a; }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      background: #c4956a;
+      color: white;
+      font-size: 16px;
+      font-family: Georgia, serif;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover { background: #b07d52; }
+    button:disabled { background: #d4bfb0; cursor: not-allowed; }
+
+    .hint { font-size: 13px; color: #9a7e6f; text-align: center; }
+
+    /* --- Booth screen --- */
+    #booth-screen { display: none; width: 100%; max-width: 760px; }
+
+    .status-bar {
+      text-align: center;
+      margin-bottom: 16px;
+      font-size: 14px;
+      color: #9a7e6f;
+    }
+
+    .status-bar strong { color: #3a2e2e; }
+
+    .cameras {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .cam-box {
+      position: relative;
+      background: #e8ddd4;
+      border-radius: 16px;
+      overflow: hidden;
+      aspect-ratio: 3/4;
+    }
+
+    .cam-box video, .cam-box canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .cam-label {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.35);
+      color: white;
+      font-size: 12px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .countdown-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 80px;
+      color: white;
+      font-weight: bold;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.4);
+      background: rgba(0,0,0,0.15);
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+    }
+
+    .countdown-overlay.visible { opacity: 1; }
+
+    /* Thumbnail strip under cameras */
+    .thumb-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .thumb {
+      background: #e8ddd4;
+      border-radius: 8px;
+      aspect-ratio: 3/4;
+      overflow: hidden;
+      position: relative;
+      border: 2px solid transparent;
+    }
+
+    .thumb.active-slot { border-color: #c4956a; }
+
+    .thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .thumb .slot-num {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      color: #b8a89a;
+    }
+
+    .retake-btn {
+      position: absolute;
+      bottom: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.5);
+      color: white;
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 20px;
+      border: none;
+      cursor: pointer;
+      width: auto;
+      font-family: Georgia, serif;
+    }
+
+    .controls { text-align: center; }
+
+    #start-btn { max-width: 240px; margin: 0 auto; display: block; }
+
+    /* --- Strip screen --- */
+    #strip-screen { display: none; width: 100%; max-width: 500px; }
+
+    .strip-options {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .strip-options label { font-size: 14px; color: #9a7e6f; }
+
+    .color-pickers {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .color-swatch {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: border-color 0.15s;
+    }
+
+    .color-swatch.selected { border-color: #3a2e2e; }
+
+    #strip-canvas {
+      width: 100%;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+      margin-bottom: 16px;
+    }
+
+    #download-btn { background: #7a9e7e; }
+    #download-btn:hover { background: #5f8463; }
+    #restart-btn { background: transparent; border: 1.5px solid #c4956a; color: #c4956a; margin-top: 8px; }
+    #restart-btn:hover { background: #fdf0e6; }
+  </style>
+</head>
+<body>
+
+  <h1>📸 Our Photobooth</h1>
+  <p class="subtitle">A little moment, just for us</p>
+
+  <!-- SCREEN 1: Setup -->
+  <div id="setup-screen">
+    <input type="text" id="name-input" placeholder="Your name" />
+    <input type="text" id="room-input" placeholder="Room code (share with partner)" value="ourroom" />
+    <button id="join-btn">Open the booth</button>
+    <p class="hint">Both of you enter the same room code</p>
+  </div>
+
+  <!-- SCREEN 2: Booth -->
+  <div id="booth-screen">
+    <div class="status-bar" id="status-bar">Waiting for partner...</div>
+
+    <div class="cameras">
+      <div class="cam-box">
+        <video id="local-video" autoplay muted playsinline></video>
+        <div class="countdown-overlay" id="local-countdown"></div>
+        <div class="cam-label" id="local-label">You</div>
+      </div>
+      <div class="cam-box">
+        <video id="remote-video" autoplay playsinline></video>
+        <div class="countdown-overlay" id="remote-countdown"></div>
+        <div class="cam-label" id="remote-label">Partner</div>
+      </div>
+    </div>
+
+    <div class="thumb-row" id="thumb-row">
+      <div class="thumb active-slot" id="slot-0"><div class="slot-num">1</div></div>
+      <div class="thumb" id="slot-1"><div class="slot-num">2</div></div>
+      <div class="thumb" id="slot-2"><div class="slot-num">3</div></div>
+      <div class="thumb" id="slot-3"><div class="slot-num">4</div></div>
+    </div>
+
+    <div class="controls">
+      <button id="start-btn" disabled>Waiting for partner...</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: Strip -->
+  <div id="strip-screen">
+    <div class="strip-options">
+      <div>
+        <label>Border color</label><br><br>
+        <div class="color-pickers" id="color-pickers">
+          <div class="color-swatch selected" style="background:#fff8f0" data-color="#fff8f0"></div>
+          <div class="color-swatch" style="background:#f5c6c6" data-color="#f5c6c6"></div>
+          <div class="color-swatch" style="background:#c6d9f5" data-color="#c6d9f5"></div>
+          <div class="color-swatch" style="background:#c6f5d3" data-color="#c6f5d3"></div>
+          <div class="color-swatch" style="background:#2e2e2e" data-color="#2e2e2e"></div>
+        </div>
+      </div>
+      <div>
+        <label>Caption</label><br><br>
+        <input type="text" id="caption-input" placeholder="Add a little note..." maxlength="60" style="max-width:100%">
+      </div>
+    </div>
+
+    <canvas id="strip-canvas"></canvas>
+
+    <button id="download-btn">Download strip</button>
+    <button id="restart-btn">Take new photos</button>
+  </div>
+
+  <script>
+    // ---- CONFIG ----
+    // Change this to your Render URL once deployed. For local testing use ws://localhost:3000
+    const SERVER_URL = 'ws://localhost:3000';
+
+    // ---- STATE ----
+    let ws, pc;
+    let localStream;
+    let myName = '';
+    let partnerName = '';
+    let currentSlot = 0;
+    let photos = [null, null, null, null]; // local captures
+    let remotePhotos = [null, null, null, null];
+    let borderColor = '#fff8f0';
+    let isInitiator = false;
+
+    const ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+    // ---- ELEMENTS ----
+    const setupScreen = document.getElementById('setup-screen');
+    const boothScreen = document.getElementById('booth-screen');
+    const stripScreen = document.getElementById('strip-screen');
+    const joinBtn = document.getElementById('join-btn');
+    const startBtn = document.getElementById('start-btn');
+    const statusBar = document.getElementById('status-bar');
+    const localVideo = document.getElementById('local-video');
+    const remoteVideo = document.getElementById('remote-video');
+    const localCountdown = document.getElementById('local-countdown');
+    const remoteCountdown = document.getElementById('remote-countdown');
+    const localLabel = document.getElementById('local-label');
+    const remoteLabel = document.getElementById('remote-label');
+    const stripCanvas = document.getElementById('strip-canvas');
+    const captionInput = document.getElementById('caption-input');
+
+    // ---- JOIN ----
+    joinBtn.addEventListener('click', async () => {
+      myName = document.getElementById('name-input').value.trim() || 'You';
+      const room = document.getElementById('room-input').value.trim() || 'ourroom';
+
+      // Get camera
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        localVideo.srcObject = localStream;
+        localLabel.textContent = myName;
+      } catch (e) {
+        alert('Could not access camera. Please allow camera permission.');
+        return;
+      }
+
+      // Connect to server
+      ws = new WebSocket(SERVER_URL);
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ type: 'join', room, name: myName }));
+      };
+
+      ws.onmessage = async (e) => {
+        const msg = JSON.parse(e.data);
+        await handleMessage(msg);
+      };
+
+      ws.onerror = () => alert('Could not connect to server. Is it running?');
+
+      setupScreen.style.display = 'none';
+      boothScreen.style.display = 'block';
+    });
+
+    // ---- WEBRTC SIGNALING ----
+    async function handleMessage(msg) {
+      switch (msg.type) {
+        case 'room_info':
+          if (msg.count === 2) await bothConnected();
+          break;
+
+        case 'partner_joined':
+          partnerName = msg.name || 'Partner';
+          await bothConnected();
+          // Second person to join creates the offer
+          isInitiator = false;
+          await createOffer();
+          break;
+
+        case 'partner_left':
+          statusBar.textContent = 'Partner disconnected. Waiting...';
+          startBtn.disabled = true;
+          startBtn.textContent = 'Waiting for partner...';
+          break;
+
+        case 'offer':
+          await handleOffer(msg.sdp);
+          break;
+
+        case 'answer':
+          await pc.setRemoteDescription({ type: 'answer', sdp: msg.sdp });
+          break;
+
+        case 'ice':
+          if (msg.candidate) await pc.addIceCandidate(msg.candidate);
+          break;
+
+        case 'countdown_start':
+          runCountdown(msg.startAt, msg.slot);
+          break;
+
+        case 'retake':
+          currentSlot = msg.slot;
+          updateSlotHighlight();
+          startBtn.textContent = `Retake photo ${msg.slot + 1}`;
+          startBtn.disabled = false;
+          break;
+
+        case 'remote_photo':
+          remotePhotos[msg.slot] = msg.dataUrl;
+          if (photos[msg.slot] && remotePhotos[msg.slot]) checkAllDone();
+          break;
+      }
+    }
+
+    async function bothConnected() {
+      statusBar.innerHTML = `Connected with <strong>${partnerName || 'partner'}</strong> ✓`;
+      startBtn.disabled = false;
+      startBtn.textContent = 'Start photo session';
+      remoteLabel.textContent = partnerName || 'Partner';
+    }
+
+    function setupPeerConnection() {
+      pc = new RTCPeerConnection(ICE_SERVERS);
+
+      localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+      pc.ontrack = (e) => {
+        remoteVideo.srcObject = e.streams[0];
+      };
+
+      pc.onicecandidate = (e) => {
+        if (e.candidate) {
+          ws.send(JSON.stringify({ type: 'ice', candidate: e.candidate }));
+        }
+      };
+    }
+
+    async function createOffer() {
+      setupPeerConnection();
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      ws.send(JSON.stringify({ type: 'offer', sdp: offer.sdp }));
+    }
+
+    async function handleOffer(sdp) {
+      setupPeerConnection();
+      await pc.setRemoteDescription({ type: 'offer', sdp });
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      ws.send(JSON.stringify({ type: 'answer', sdp: answer.sdp }));
+    }
+
+    // ---- START BUTTON ----
+    startBtn.addEventListener('click', () => {
+      const startAt = Date.now() + 1500;
+      ws.send(JSON.stringify({ type: 'countdown_start', startAt, slot: currentSlot }));
+      runCountdown(startAt, currentSlot);
+      startBtn.disabled = true;
+    });
+
+    // ---- COUNTDOWN + CAPTURE ----
+    function runCountdown(startAt, slot) {
+      localCountdown.classList.add('visible');
+      remoteCountdown.classList.add('visible');
+
+      const interval = setInterval(() => {
+        const remaining = Math.ceil((startAt - Date.now()) / 1000);
+
+        if (remaining <= 0) {
+          clearInterval(interval);
+          localCountdown.classList.remove('visible');
+          remoteCountdown.classList.remove('visible');
+          capturePhoto(slot);
+        } else {
+          localCountdown.textContent = remaining;
+          remoteCountdown.textContent = remaining;
+        }
+      }, 100);
+    }
+
+    function capturePhoto(slot) {
+      // Capture from local video
+      const canvas = document.createElement('canvas');
+      canvas.width = localVideo.videoWidth;
+      canvas.height = localVideo.videoHeight;
+      canvas.getContext('2d').drawImage(localVideo, 0, 0);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+      photos[slot] = dataUrl;
+
+      // Show thumbnail
+      const thumb = document.getElementById(`slot-${slot}`);
+      thumb.innerHTML = `<img src="${dataUrl}"><button class="retake-btn" onclick="retakeSlot(${slot})">Retake</button>`;
+
+      // Send our photo to partner
+      ws.send(JSON.stringify({ type: 'remote_photo', slot, dataUrl }));
+
+      // Move to next slot or finish
+      if (slot < 3) {
+        currentSlot = slot + 1;
+        updateSlotHighlight();
+        startBtn.textContent = `Take photo ${currentSlot + 1}`;
+        startBtn.disabled = false;
+      } else {
+        startBtn.textContent = 'All done!';
+        if (remotePhotos[slot]) checkAllDone();
+      }
+    }
+
+    function retakeSlot(slot) {
+      photos[slot] = null;
+      remotePhotos[slot] = null;
+      currentSlot = slot;
+      updateSlotHighlight();
+      const thumb = document.getElementById(`slot-${slot}`);
+      thumb.innerHTML = `<div class="slot-num">${slot + 1}</div>`;
+      startBtn.textContent = `Retake photo ${slot + 1}`;
+      startBtn.disabled = false;
+      ws.send(JSON.stringify({ type: 'retake', slot }));
+    }
+
+    function updateSlotHighlight() {
+      for (let i = 0; i < 4; i++) {
+        document.getElementById(`slot-${i}`).classList.toggle('active-slot', i === currentSlot);
+      }
+    }
+
+    function checkAllDone() {
+      if (photos.every(p => p) && remotePhotos.every(p => p)) {
+        setTimeout(showStrip, 500);
+      }
+    }
+
+    // ---- STRIP ----
+    function showStrip() {
+      boothScreen.style.display = 'none';
+      stripScreen.style.display = 'block';
+      renderStrip();
+    }
+
+    function renderStrip() {
+      const W = 600, BORDER = 24, GAP = 10;
+      const frameW = (W - BORDER * 2 - GAP) / 2;
+      const frameH = frameW * 1.33;
+      const captionH = 60;
+      const H = BORDER + (frameH + GAP) * 4 - GAP + BORDER + captionH;
+
+      stripCanvas.width = W;
+      stripCanvas.height = H;
+      const ctx = stripCanvas.getContext('2d');
+
+      // Background
+      ctx.fillStyle = borderColor;
+      ctx.fillRect(0, 0, W, H);
+
+      const loadImage = (src) => new Promise(res => {
+        const img = new Image();
+        img.onload = () => res(img);
+        img.src = src;
+      });
+
+      Promise.all([...photos, ...remotePhotos].map(loadImage)).then(imgs => {
+        for (let i = 0; i < 4; i++) {
+          const y = BORDER + i * (frameH + GAP);
+
+          // Left frame (you)
+          ctx.save();
+          ctx.beginPath();
+          ctx.roundRect(BORDER, y, frameW, frameH, 6);
+          ctx.clip();
+          ctx.drawImage(imgs[i], BORDER, y, frameW, frameH);
+          ctx.restore();
+
+          // Right frame (partner)
+          const rx = BORDER + frameW + GAP;
+          ctx.save();
+          ctx.beginPath();
+          ctx.roundRect(rx, y, frameW, frameH, 6);
+          ctx.clip();
+          ctx.drawImage(imgs[i + 4], rx, y, frameW, frameH);
+          ctx.restore();
+        }
+
+        // Caption
+        const caption = captionInput.value || '';
+        if (caption) {
+          ctx.fillStyle = borderColor === '#2e2e2e' ? '#ffffff' : '#3a2e2e';
+          ctx.font = '18px Georgia, serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(caption, W / 2, H - BORDER + 10);
+        }
+
+        // Date
+        ctx.fillStyle = borderColor === '#2e2e2e' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.25)';
+        ctx.font = '12px Georgia, serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(new Date().toLocaleDateString(), W / 2, H - 8);
+      });
+    }
+
+    // Live re-render strip when caption or color changes
+    captionInput.addEventListener('input', renderStrip);
+
+    document.getElementById('color-pickers').addEventListener('click', (e) => {
+      const swatch = e.target.closest('.color-swatch');
+      if (!swatch) return;
+      document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+      swatch.classList.add('selected');
+      borderColor = swatch.dataset.color;
+      renderStrip();
+    });
+
+    document.getElementById('download-btn').addEventListener('click', () => {
+      const a = document.createElement('a');
+      a.download = `our-photobooth-${Date.now()}.png`;
+      a.href = stripCanvas.toDataURL('image/png');
+      a.click();
+    });
+
+    document.getElementById('restart-btn').addEventListener('click', () => location.reload());
+  </script>
+</body>
+</html>
