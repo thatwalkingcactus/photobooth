@@ -93,7 +93,7 @@
 
   .hint { font-size: 13px; color: var(--text-soft); text-align: center; font-weight: 500; }
 
-  #booth-screen { display: none; width: 100%; max-width: 780px; }
+  #main-app { display: none; width: 100%; max-width: 780px; }
 
   .status-bar {
     text-align: center;
@@ -122,6 +122,19 @@
     35% { transform: scale(1.3); opacity: 1; }
     100% { transform: scale(1); opacity: 1; }
   }
+
+  .voice-controls { text-align: center; margin-bottom: 14px; }
+  #mic-btn {
+    width: auto;
+    display: inline-block;
+    padding: 8px 20px;
+    font-size: 13px;
+    background: #fff;
+    color: var(--purple-dark);
+    border: 2px solid var(--purple-soft);
+    box-shadow: none;
+  }
+  #mic-btn:hover { transform: none; box-shadow: none; background: var(--purple-soft); }
 
   .cameras {
     display: grid;
@@ -174,6 +187,8 @@
 
   .countdown-overlay.visible { opacity: 1; animation: pulse 1s ease-in-out; }
 
+  #booth-controls { display: block; }
+
   .thumb-row {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -191,7 +206,6 @@
   }
 
   .thumb.active-slot { border-color: var(--purple); }
-
   .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
   .thumb .slot-num {
@@ -226,7 +240,7 @@
   .controls { text-align: center; }
   #start-btn { max-width: 260px; margin: 0 auto; display: block; }
 
-  #strip-screen { display: none; width: 100%; max-width: 520px; }
+  #strip-editor { display: none; max-width: 520px; margin: 0 auto; }
 
   .strip-options {
     display: flex;
@@ -268,6 +282,7 @@
   }
 
   #download-btn { background: linear-gradient(90deg, var(--green), var(--green-dark)); box-shadow: 0 4px 14px rgba(78, 203, 141, 0.4); }
+  #save-gallery-btn { background: linear-gradient(90deg, var(--purple), var(--purple-dark)); margin-top: 10px; }
   #restart-btn {
     background: transparent;
     border: 2px solid var(--purple);
@@ -276,6 +291,71 @@
     box-shadow: none;
   }
   #restart-btn:hover { background: var(--purple-soft); }
+  #save-status { margin-top: 8px; }
+
+  .gallery-section {
+    width: 100%;
+    max-width: 760px;
+    margin-top: 36px;
+  }
+  .gallery-section h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 14px;
+    text-align: center;
+  }
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 16px;
+  }
+  .gallery-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 10px;
+    box-shadow: 0 4px 16px rgba(155,109,255,0.12);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .gallery-card img {
+    width: 100%;
+    max-height: 220px;
+    object-fit: contain;
+    border-radius: 8px;
+    background: var(--purple-soft);
+  }
+  .gallery-date { font-size: 11px; color: var(--text-soft); font-weight: 600; text-align: center; }
+  .gallery-actions { display: flex; gap: 8px; width: 100%; }
+  .gallery-actions button, .gallery-actions a {
+    flex: 1;
+    width: auto;
+    padding: 8px;
+    font-size: 11px;
+    border-radius: 999px;
+    text-align: center;
+    text-decoration: none;
+    font-weight: 700;
+    font-family: 'Quicksand', sans-serif;
+    cursor: pointer;
+    border: none;
+    box-shadow: none;
+  }
+  .gallery-download { background: var(--green-soft); color: var(--green-dark); }
+  .gallery-delete { background: #fde7ea; color: #c2455a; }
+
+  .version-tag {
+    position: fixed;
+    bottom: 10px;
+    right: 14px;
+    font-size: 11px;
+    color: var(--text-soft);
+    opacity: 0.55;
+    font-weight: 600;
+    pointer-events: none;
+  }
 </style>
 </head>
 <body>
@@ -290,9 +370,20 @@
   <p class="hint">Both of you enter the same room code</p>
 </div>
 
-<div id="booth-screen">
+<div class="gallery-section">
+  <h2>Your saved memories</h2>
+  <div class="gallery-grid" id="gallery-grid">
+    <p class="hint">Loading your memories...</p>
+  </div>
+</div>
+
+<div id="main-app">
   <div class="status-bar" id="status-bar">Waiting for partner...</div>
   <div class="big-countdown" id="big-countdown"></div>
+
+  <div class="voice-controls">
+    <button id="mic-btn">Mute mic</button>
+  </div>
 
   <div class="cameras">
     <div class="cam-box">
@@ -307,44 +398,51 @@
     </div>
   </div>
 
-  <div class="thumb-row" id="thumb-row">
-    <div class="thumb active-slot" id="slot-0"><div class="slot-num">1</div></div>
-    <div class="thumb" id="slot-1"><div class="slot-num">2</div></div>
-    <div class="thumb" id="slot-2"><div class="slot-num">3</div></div>
-    <div class="thumb" id="slot-3"><div class="slot-num">4</div></div>
+  <div id="booth-controls">
+    <div class="thumb-row" id="thumb-row">
+      <div class="thumb active-slot" id="slot-0"><div class="slot-num">1</div></div>
+      <div class="thumb" id="slot-1"><div class="slot-num">2</div></div>
+      <div class="thumb" id="slot-2"><div class="slot-num">3</div></div>
+      <div class="thumb" id="slot-3"><div class="slot-num">4</div></div>
+    </div>
+
+    <div class="controls">
+      <button id="start-btn" disabled>Waiting for partner...</button>
+    </div>
   </div>
 
-  <div class="controls">
-    <button id="start-btn" disabled>Waiting for partner...</button>
-  </div>
-</div>
-
-<div id="strip-screen">
-  <div class="strip-options">
-    <div>
-      <label>Border color</label>
-      <div class="color-pickers" id="color-pickers">
-        <div class="color-swatch selected" style="background:#f0e9ff" data-color="#f0e9ff"></div>
-        <div class="color-swatch" style="background:#e5f9ef" data-color="#e5f9ef"></div>
-        <div class="color-swatch" style="background:#9b6dff" data-color="#9b6dff"></div>
-        <div class="color-swatch" style="background:#4ecb8d" data-color="#4ecb8d"></div>
-        <div class="color-swatch" style="background:#3a2e4d" data-color="#3a2e4d"></div>
+  <div id="strip-editor">
+    <div class="strip-options">
+      <div>
+        <label>Border color</label>
+        <div class="color-pickers" id="color-pickers">
+          <div class="color-swatch selected" style="background:#f0e9ff" data-color="#f0e9ff"></div>
+          <div class="color-swatch" style="background:#e5f9ef" data-color="#e5f9ef"></div>
+          <div class="color-swatch" style="background:#9b6dff" data-color="#9b6dff"></div>
+          <div class="color-swatch" style="background:#4ecb8d" data-color="#4ecb8d"></div>
+          <div class="color-swatch" style="background:#3a2e4d" data-color="#3a2e4d"></div>
+        </div>
+      </div>
+      <div>
+        <label>Caption</label>
+        <input type="text" id="caption-input" placeholder="Add a little note..." maxlength="60">
       </div>
     </div>
-    <div>
-      <label>Caption</label>
-      <input type="text" id="caption-input" placeholder="Add a little note..." maxlength="60">
-    </div>
+
+    <canvas id="strip-canvas"></canvas>
+
+    <button id="download-btn">Download strip</button>
+    <button id="save-gallery-btn">Save to our gallery</button>
+    <p class="hint" id="save-status"></p>
+    <button id="restart-btn">Take new photos</button>
   </div>
-
-  <canvas id="strip-canvas"></canvas>
-
-  <button id="download-btn">Download strip</button>
-  <button id="restart-btn">Take new photos</button>
 </div>
 
+<div class="version-tag">v1.5.0</div>
+
 <script>
-  const SERVER_URL = 'wss://YOUR-RENDER-URL.onrender.com'; // keep your existing Render URL here
+  const SERVER_URL = 'https://photobooth-apqx.onrender.com'; // keep your existing Render URL here
+  const HTTP_URL = SERVER_URL.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
 
   let ws, pc;
   let localStream;
@@ -359,6 +457,8 @@
   let clockOffset = 0;
   let activeCountdownInterval = null;
   let pendingChainTimeout = null;
+  let borderColor = '#f0e9ff';
+  let micOn = true;
 
   const ICE_SERVERS = {
     iceServers: [
@@ -369,10 +469,12 @@
   };
 
   const setupScreen = document.getElementById('setup-screen');
-  const boothScreen = document.getElementById('booth-screen');
-  const stripScreen = document.getElementById('strip-screen');
+  const mainApp = document.getElementById('main-app');
+  const boothControls = document.getElementById('booth-controls');
+  const stripEditor = document.getElementById('strip-editor');
   const joinBtn = document.getElementById('join-btn');
   const startBtn = document.getElementById('start-btn');
+  const micBtn = document.getElementById('mic-btn');
   const statusBar = document.getElementById('status-bar');
   const bigCountdown = document.getElementById('big-countdown');
   const localVideo = document.getElementById('local-video');
@@ -383,6 +485,8 @@
   const remoteLabel = document.getElementById('remote-label');
   const stripCanvas = document.getElementById('strip-canvas');
   const captionInput = document.getElementById('caption-input');
+  const saveStatus = document.getElementById('save-status');
+  const galleryGrid = document.getElementById('gallery-grid');
 
   function getServerNow() { return Date.now() + clockOffset; }
 
@@ -413,16 +517,52 @@
     });
   }
 
+  // --- Gallery on the landing page ---
+  function loadGallery() {
+    galleryGrid.innerHTML = '<p class="hint">Loading your memories...</p>';
+    fetch(`${HTTP_URL}/strips`)
+      .then(r => r.json())
+      .then(strips => renderGallery(strips))
+      .catch(() => { galleryGrid.innerHTML = '<p class="hint">Could not load saved photostrips.</p>'; });
+  }
+
+  function renderGallery(strips) {
+    if (!strips.length) {
+      galleryGrid.innerHTML = '<p class="hint">No saved photostrips yet.</p>';
+      return;
+    }
+    galleryGrid.innerHTML = strips.map(s => {
+      const date = new Date(s.timestamp).toLocaleString();
+      return `
+        <div class="gallery-card">
+          <img src="${s.dataUrl}" alt="Photostrip from ${date}">
+          <div class="gallery-date">${date}</div>
+          <div class="gallery-actions">
+            <a class="gallery-download" href="${s.dataUrl}" download="photostrip-${s.id}.png">Download</a>
+            <button class="gallery-delete" onclick="deleteStrip('${s.id}')">Delete</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function deleteStrip(id) {
+    fetch(`${HTTP_URL}/strips/${id}`, { method: 'DELETE' }).then(() => loadGallery());
+  }
+
+  loadGallery();
+
+  // --- Joining the room ---
   joinBtn.addEventListener('click', async () => {
     myName = document.getElementById('name-input').value.trim() || 'You';
     const room = document.getElementById('room-input').value.trim() || 'ourroom';
 
     try {
-      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       localVideo.srcObject = localStream;
       localLabel.textContent = myName;
     } catch (e) {
-      alert('Could not access camera. Please allow camera permission.');
+      alert('Could not access camera/microphone. Please allow permission.');
       return;
     }
 
@@ -442,7 +582,13 @@
     ws.onerror = () => alert('Could not connect to server. Is it running?');
 
     setupScreen.style.display = 'none';
-    boothScreen.style.display = 'block';
+    mainApp.style.display = 'block';
+  });
+
+  micBtn.addEventListener('click', () => {
+    micOn = !micOn;
+    localStream.getAudioTracks().forEach(t => t.enabled = micOn);
+    micBtn.textContent = micOn ? 'Mute mic' : 'Unmute mic';
   });
 
   async function handleMessage(msg) {
@@ -490,6 +636,22 @@
         remotePhotos[msg.slot] = msg.dataUrl;
         checkSlotMerge(msg.slot);
         break;
+
+      case 'strip_update':
+        if (msg.field === 'caption') {
+          captionInput.value = msg.value;
+        } else if (msg.field === 'color') {
+          borderColor = msg.value;
+          document.querySelectorAll('.color-swatch').forEach(s => {
+            s.classList.toggle('selected', s.dataset.color === msg.value);
+          });
+        }
+        renderStrip();
+        break;
+
+      case 'restart_session':
+        resetSessionState();
+        break;
     }
   }
 
@@ -535,16 +697,8 @@
   }
 
   function runCountdown(startAt, slot, chained) {
-    // Cancel any countdown already running so retakes never collide
-    if (activeCountdownInterval) {
-      clearInterval(activeCountdownInterval);
-      activeCountdownInterval = null;
-    }
-    // Cancel any pending auto-chain that hasn't fired yet
-    if (pendingChainTimeout) {
-      clearTimeout(pendingChainTimeout);
-      pendingChainTimeout = null;
-    }
+    if (activeCountdownInterval) { clearInterval(activeCountdownInterval); activeCountdownInterval = null; }
+    if (pendingChainTimeout) { clearTimeout(pendingChainTimeout); pendingChainTimeout = null; }
 
     currentSlot = slot;
     updateSlotHighlight();
@@ -603,10 +757,7 @@
 
   function retakeSlot(slot) {
     sessionDriver = true;
-    if (pendingChainTimeout) {
-      clearTimeout(pendingChainTimeout);
-      pendingChainTimeout = null;
-    }
+    if (pendingChainTimeout) { clearTimeout(pendingChainTimeout); pendingChainTimeout = null; }
     clearSlot(slot);
     const startAt = getServerNow() + 10000;
     ws.send(JSON.stringify({ type: 'retake_and_start', slot, startAt }));
@@ -659,12 +810,37 @@
     });
   }
 
-  let borderColor = '#f0e9ff';
-
+  // --- Strip screen (cameras stay visible above this the whole time) ---
   function showStrip() {
-    boothScreen.style.display = 'none';
-    stripScreen.style.display = 'block';
+    boothControls.style.display = 'none';
+    stripEditor.style.display = 'block';
     renderStrip();
+  }
+
+  function goToBooth() {
+    ws.send(JSON.stringify({ type: 'restart_session' }));
+    resetSessionState();
+  }
+
+  function resetSessionState() {
+    photos = [null, null, null, null];
+    remotePhotos = [null, null, null, null];
+    mergedPhotos = [null, null, null, null];
+    currentSlot = 0;
+    sessionDriver = false;
+    for (let i = 0; i < 4; i++) clearSlot(i);
+    updateSlotHighlight();
+
+    captionInput.value = '';
+    borderColor = '#f0e9ff';
+    document.querySelectorAll('.color-swatch').forEach((s, i) => s.classList.toggle('selected', i === 0));
+
+    stripEditor.style.display = 'none';
+    boothControls.style.display = 'block';
+    startBtn.style.display = 'block';
+    startBtn.disabled = false;
+    startBtn.textContent = 'Start photo session';
+    saveStatus.textContent = '';
   }
 
   async function renderStrip() {
@@ -690,13 +866,14 @@
     const leftSrcs = myRole === 'left' ? photos : remotePhotos;
     const rightSrcs = myRole === 'left' ? remotePhotos : photos;
 
+    if (leftSrcs.some(s => !s) || rightSrcs.some(s => !s)) return;
+
     const leftImgs = await Promise.all(leftSrcs.map(loadImage));
     const rightImgs = await Promise.all(rightSrcs.map(loadImage));
 
     for (let i = 0; i < 4; i++) {
       const y = BORDER + i * (frameH + ROW_GAP);
 
-      // No rounded corners — sharp rect clip
       ctx.save();
       ctx.beginPath();
       ctx.rect(BORDER, y, frameW, frameH);
@@ -718,7 +895,6 @@
       ctx.fillStyle = borderColor === '#3a2e4d' ? '#ffffff' : '#3a2e4d';
       ctx.font = "700 32px 'Caveat', cursive";
       ctx.textAlign = 'center';
-      // Moved up closer to the photos
       ctx.fillText(caption, W / 2, H - BORDER + 8);
     }
 
@@ -728,7 +904,12 @@
     ctx.fillText(new Date().toLocaleDateString(), W / 2, H - 10);
   }
 
-  captionInput.addEventListener('input', renderStrip);
+  captionInput.addEventListener('input', () => {
+    renderStrip();
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'strip_update', field: 'caption', value: captionInput.value }));
+    }
+  });
 
   document.getElementById('color-pickers').addEventListener('click', (e) => {
     const swatch = e.target.closest('.color-swatch');
@@ -737,6 +918,9 @@
     swatch.classList.add('selected');
     borderColor = swatch.dataset.color;
     renderStrip();
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'strip_update', field: 'color', value: borderColor }));
+    }
   });
 
   document.getElementById('download-btn').addEventListener('click', () => {
@@ -746,7 +930,19 @@
     a.click();
   });
 
-  document.getElementById('restart-btn').addEventListener('click', () => location.reload());
+  document.getElementById('save-gallery-btn').addEventListener('click', () => {
+    saveStatus.textContent = 'Saving...';
+    fetch(`${HTTP_URL}/strips`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataUrl: stripCanvas.toDataURL('image/png') })
+    })
+      .then(r => r.json())
+      .then(() => { saveStatus.textContent = 'Saved to your gallery ✓'; loadGallery(); })
+      .catch(() => { saveStatus.textContent = 'Could not save. Try again.'; });
+  });
+
+  document.getElementById('restart-btn').addEventListener('click', goToBooth);
 </script>
 </body>
 </html>
