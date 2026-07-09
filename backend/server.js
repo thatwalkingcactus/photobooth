@@ -35,11 +35,15 @@ async function uploadImage(base64DataUrl) {
   return `${SUPABASE_URL}/storage/v1/object/public/strips/${filename}`;
 }
 
-async function insertStrip(imageUrl) {
+async function insertStrip(imageUrl, createdAt) {
+  const body = createdAt
+    ? { image_url: imageUrl, created_at: createdAt }
+    : { image_url: imageUrl };
+
   const res = await fetch(`${SUPABASE_URL}/rest/v1/strips`, {
     method: 'POST',
     headers: { ...supabaseHeaders(), 'Prefer': 'return=representation' },
-    body: JSON.stringify({ image_url: imageUrl })
+    body: JSON.stringify(body)
   });
   if (!res.ok) throw new Error(`DB insert failed: ${await res.text()}`);
   const rows = await res.json();
@@ -47,9 +51,7 @@ async function insertStrip(imageUrl) {
 }
 
 async function fetchStrips() {
-  const url = `${SUPABASE_URL}/rest/v1/strips?select=id,image_url,created_at&order=created_at.desc`;
-  console.log('Fetching from:', url);
-  const res = await fetch(url, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/strips?select=id,image_url,created_at&order=created_at.desc`, {
     method: 'GET',
     headers: {
       'apikey': SUPABASE_KEY,
@@ -58,7 +60,6 @@ async function fetchStrips() {
     }
   });
   const text = await res.text();
-  console.log('Supabase response:', text);
   if (!res.ok) throw new Error(`DB fetch failed: ${text}`);
   return JSON.parse(text);
 }
@@ -92,7 +93,6 @@ function sendJSON(res, status, data) {
 }
 
 const server = http.createServer((req, res) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
@@ -103,7 +103,6 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Debug endpoint
   if (req.url === '/debug' && req.method === 'GET') {
     sendJSON(res, 200, {
       hasUrl: !!SUPABASE_URL,
@@ -113,7 +112,6 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // GET /strips
   if (req.url === '/strips' && req.method === 'GET') {
     fetchStrips()
       .then(strips => sendJSON(res, 200, strips.map(s => ({
@@ -125,16 +123,15 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // POST /strips
   if (req.url === '/strips' && req.method === 'POST') {
     let body = '';
     req.on('data', chunk => { body += chunk; });
     req.on('end', async () => {
       try {
-        const { dataUrl } = JSON.parse(body);
+        const { dataUrl, createdAt } = JSON.parse(body);
         if (!dataUrl) { sendJSON(res, 400, { error: 'missing dataUrl' }); return; }
         const imageUrl = await uploadImage(dataUrl);
-        const strip = await insertStrip(imageUrl);
+        const strip = await insertStrip(imageUrl, createdAt || null);
         sendJSON(res, 200, {
           id: strip.id,
           dataUrl: imageUrl,
@@ -148,7 +145,6 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // DELETE /strips/:id
   if (req.url.startsWith('/strips/') && req.method === 'DELETE') {
     const id = req.url.split('/strips/')[1];
     deleteStrip(id)
@@ -157,7 +153,61 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Health check
+  // Bulk export — returns all strips with full image data as base64
+  if (req.url === '/strips/export' && req.method === 'GET') {
+    fetchStrips()
+      .then(async strips => {
+        // Fetch each image and convert to base64 for portability
+        const withData = await Promise.all(strips.map(async s => {
+          try {
+            const imgRes = await fetch(s.image_url);
+            const buf = await imgRes.arrayBuffer();
+            const b64 = Buffer.from(buf).toString('base64');
+            return {
+              id: s.id,
+              dataUrl: `data:image/png;base64,${b64}`,
+              timestamp: new Date(s.created_at).getTime(),
+              created_at: s.created_at
+            };
+          } catch {
+            return {
+              id: s.id,
+              dataUrl: s.image_url,
+              timestamp: new Date(s.created_at).getTime(),
+              created_at: s.created_at
+            };
+          }
+        }));
+        sendJSON(res, 200, { version: 1, exported_at: new Date().toISOString(), strips: withData });
+      })
+      .catch(e => { console.error(e); sendJSON(res, 500, { error: e.message }); });
+    return;
+  }
+
+  // Bulk import — accepts the export JSON and re-uploads everything
+  if (req.url === '/strips/import' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', async () => {
+      try {
+        const { strips } = JSON.parse(body);
+        if (!Array.isArray(strips)) { sendJSON(res, 400, { error: 'invalid format' }); return; }
+        // Import in reverse so newest ends up on top after created_at ordering
+        const results = [];
+        for (const s of [...strips].reverse()) {
+          const imageUrl = await uploadImage(s.dataUrl);
+          const inserted = await insertStrip(imageUrl, s.created_at || new Date(s.timestamp).toISOString());
+          results.push(inserted.id);
+        }
+        sendJSON(res, 200, { imported: results.length });
+      } catch (e) {
+        console.error(e);
+        sendJSON(res, 500, { error: e.message });
+      }
+    });
+    return;
+  }
+
   res.writeHead(200, { 'Access-Control-Allow-Origin': '*' });
   res.end('Photobooth server running');
 });

@@ -101,6 +101,161 @@
 
   .hint { font-size: 13px; color: var(--text-soft); text-align: center; font-weight: 500; }
 
+  /* Gallery */
+  .gallery-section {
+    width: 100%;
+    max-width: 760px;
+    margin-top: 36px;
+  }
+
+  .gallery-section h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 8px;
+    text-align: center;
+  }
+
+  .gallery-bulk {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .gallery-bulk button, .gallery-bulk label {
+    width: auto;
+    padding: 9px 20px;
+    font-size: 13px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-weight: 700;
+    font-family: 'Quicksand', sans-serif;
+    box-shadow: none;
+  }
+
+  #export-btn { background: var(--green-soft); color: var(--green-dark); border: none; }
+  #export-btn:hover { transform: translateY(-1px); background: #c5f5df; box-shadow: none; }
+
+  .import-label {
+    background: var(--purple-soft);
+    color: var(--purple-dark);
+    border: none;
+    display: inline-block;
+    padding: 9px 20px;
+    font-size: 13px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-weight: 700;
+    font-family: 'Quicksand', sans-serif;
+    transition: transform 0.15s;
+  }
+
+  .import-label:hover { transform: translateY(-1px); }
+
+  #import-input { display: none; }
+
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 16px;
+  }
+
+  .gallery-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 10px;
+    box-shadow: 0 4px 16px rgba(155,109,255,0.12);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .gallery-card img {
+    width: 100%;
+    max-height: 220px;
+    object-fit: contain;
+    border-radius: 8px;
+    background: var(--purple-soft);
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .gallery-card img:hover {
+    transform: scale(1.03);
+    box-shadow: 0 4px 16px rgba(155,109,255,0.25);
+  }
+
+  .gallery-date { font-size: 11px; color: var(--text-soft); font-weight: 600; text-align: center; }
+
+  .gallery-actions { display: flex; gap: 8px; width: 100%; }
+
+  .gallery-actions button, .gallery-actions a {
+    flex: 1;
+    width: auto;
+    padding: 8px;
+    font-size: 11px;
+    border-radius: 999px;
+    text-align: center;
+    text-decoration: none;
+    font-weight: 700;
+    font-family: 'Quicksand', sans-serif;
+    cursor: pointer;
+    border: none;
+    box-shadow: none;
+    transition: transform 0.1s;
+  }
+
+  .gallery-download { background: var(--green-soft); color: var(--green-dark); }
+  .gallery-delete { background: #fde7ea; color: #c2455a; }
+
+  /* Lightbox */
+  #lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(30, 20, 50, 0.88);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  #lightbox.open { display: flex; }
+
+  #lightbox img {
+    max-width: 90vw;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 12px;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.5);
+  }
+
+  #lightbox-close {
+    position: absolute;
+    top: 18px;
+    right: 22px;
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: white;
+    font-size: 28px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: none;
+    padding: 0;
+    line-height: 1;
+  }
+
+  #lightbox-close:hover { background: rgba(255,255,255,0.25); transform: none; box-shadow: none; }
+
+  /* Main app */
   #main-app { display: none; width: 100%; max-width: 780px; }
 
   .status-bar {
@@ -179,7 +334,6 @@
     white-space: nowrap;
   }
 
-  /* Small pill in top-right, no overlay, no dimming */
   .countdown-pill {
     position: absolute;
     top: 10px;
@@ -300,66 +454,12 @@
   }
   #restart-btn:hover { background: var(--purple-soft); }
 
-  .gallery-section {
+  /* Gallery on strip page */
+  .gallery-section-strip {
     width: 100%;
-    max-width: 760px;
-    margin-top: 36px;
+    max-width: 520px;
+    margin: 32px auto 0;
   }
-
-  .gallery-section h2 {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--text-dark);
-    margin-bottom: 14px;
-    text-align: center;
-  }
-
-  .gallery-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 16px;
-  }
-
-  .gallery-card {
-    background: #fff;
-    border-radius: 16px;
-    padding: 10px;
-    box-shadow: 0 4px 16px rgba(155,109,255,0.12);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .gallery-card img {
-    width: 100%;
-    max-height: 220px;
-    object-fit: contain;
-    border-radius: 8px;
-    background: var(--purple-soft);
-  }
-
-  .gallery-date { font-size: 11px; color: var(--text-soft); font-weight: 600; text-align: center; }
-
-  .gallery-actions { display: flex; gap: 8px; width: 100%; }
-
-  .gallery-actions button, .gallery-actions a {
-    flex: 1;
-    width: auto;
-    padding: 8px;
-    font-size: 11px;
-    border-radius: 999px;
-    text-align: center;
-    text-decoration: none;
-    font-weight: 700;
-    font-family: 'Quicksand', sans-serif;
-    cursor: pointer;
-    border: none;
-    box-shadow: none;
-  }
-
-  .gallery-download { background: var(--green-soft); color: var(--green-dark); }
-  .gallery-delete { background: #fde7ea; color: #c2455a; }
 
   .version-tag {
     position: fixed;
@@ -379,6 +479,7 @@
 <p class="subtitle">A little moment, just for us</p>
 <p class="dedication">From Dave, dedicated to Jazz.</p>
 
+<!-- Landing page -->
 <div id="setup-screen">
   <input type="text" id="name-input" placeholder="Your name" />
   <input type="text" id="room-input" placeholder="Room code (share with partner)" value="ourroom" />
@@ -386,13 +487,22 @@
   <p class="hint">Both of you enter the same room code</p>
 </div>
 
-<div class="gallery-section">
+<!-- Gallery on landing page -->
+<div class="gallery-section" id="landing-gallery">
   <h2>Your saved memories</h2>
+  <div class="gallery-bulk">
+    <button id="export-btn">Download all (backup)</button>
+    <label class="import-label">
+      Restore from backup
+      <input type="file" id="import-input" accept=".json">
+    </label>
+  </div>
   <div class="gallery-grid" id="gallery-grid">
     <p class="hint">Loading your memories...</p>
   </div>
 </div>
 
+<!-- Main app (booth + strip) -->
 <div id="main-app">
   <div class="status-bar" id="status-bar">Waiting for partner...</div>
   <div class="big-countdown" id="big-countdown"></div>
@@ -414,6 +524,7 @@
     </div>
   </div>
 
+  <!-- Booth controls (hidden during strip) -->
   <div id="booth-controls">
     <div class="thumb-row" id="thumb-row">
       <div class="thumb active-slot" id="slot-0"><div class="slot-num">1</div></div>
@@ -426,6 +537,7 @@
     </div>
   </div>
 
+  <!-- Strip editor -->
   <div id="strip-editor">
     <div class="strip-options">
       <div>
@@ -450,10 +562,24 @@
     <button id="save-gallery-btn">Save to our gallery</button>
     <p class="hint" id="save-status"></p>
     <button id="restart-btn">Take new photos</button>
+
+    <!-- Gallery shown at bottom of strip page -->
+    <div class="gallery-section-strip" id="strip-gallery">
+      <h2>Your saved memories</h2>
+      <div class="gallery-grid" id="strip-gallery-grid">
+        <p class="hint">Loading...</p>
+      </div>
+    </div>
   </div>
 </div>
 
-<div class="version-tag">v1.6.0</div>
+<!-- Lightbox -->
+<div id="lightbox">
+  <button id="lightbox-close">✕</button>
+  <img id="lightbox-img" src="" alt="Photostrip fullscreen view">
+</div>
+
+<div class="version-tag">v1.7.0</div>
 
 <script>
   const SERVER_URL = 'https://photobooth-apqx.onrender.com'; // keep your existing Render URL here
@@ -484,26 +610,30 @@
     ]
   };
 
-  const setupScreen    = document.getElementById('setup-screen');
-  const mainApp        = document.getElementById('main-app');
-  const boothControls  = document.getElementById('booth-controls');
-  const stripEditor    = document.getElementById('strip-editor');
-  const joinBtn        = document.getElementById('join-btn');
-  const startBtn       = document.getElementById('start-btn');
-  const micBtn         = document.getElementById('mic-btn');
-  const voiceControls  = document.getElementById('voice-controls');
-  const statusBar      = document.getElementById('status-bar');
-  const bigCountdown   = document.getElementById('big-countdown');
-  const localVideo     = document.getElementById('local-video');
-  const remoteVideo    = document.getElementById('remote-video');
-  const localPill      = document.getElementById('local-pill');
-  const remotePill     = document.getElementById('remote-pill');
-  const localLabel     = document.getElementById('local-label');
-  const remoteLabel    = document.getElementById('remote-label');
-  const stripCanvas    = document.getElementById('strip-canvas');
-  const captionInput   = document.getElementById('caption-input');
-  const saveStatus     = document.getElementById('save-status');
-  const galleryGrid    = document.getElementById('gallery-grid');
+  const setupScreen   = document.getElementById('setup-screen');
+  const landingGallery = document.getElementById('landing-gallery');
+  const mainApp       = document.getElementById('main-app');
+  const boothControls = document.getElementById('booth-controls');
+  const stripEditor   = document.getElementById('strip-editor');
+  const joinBtn       = document.getElementById('join-btn');
+  const startBtn      = document.getElementById('start-btn');
+  const micBtn        = document.getElementById('mic-btn');
+  const voiceControls = document.getElementById('voice-controls');
+  const statusBar     = document.getElementById('status-bar');
+  const bigCountdown  = document.getElementById('big-countdown');
+  const localVideo    = document.getElementById('local-video');
+  const remoteVideo   = document.getElementById('remote-video');
+  const localPill     = document.getElementById('local-pill');
+  const remotePill    = document.getElementById('remote-pill');
+  const localLabel    = document.getElementById('local-label');
+  const remoteLabel   = document.getElementById('remote-label');
+  const stripCanvas   = document.getElementById('strip-canvas');
+  const captionInput  = document.getElementById('caption-input');
+  const saveStatus    = document.getElementById('save-status');
+  const galleryGrid   = document.getElementById('gallery-grid');
+  const stripGalleryGrid = document.getElementById('strip-gallery-grid');
+  const lightbox      = document.getElementById('lightbox');
+  const lightboxImg   = document.getElementById('lightbox-img');
 
   function getServerNow() { return Date.now() + clockOffset; }
 
@@ -534,38 +664,133 @@
     });
   }
 
-  // --- Gallery ---
-  function loadGallery() {
-    galleryGrid.innerHTML = '<p class="hint">Loading your memories...</p>';
-    fetch(`${HTTP_URL}/strips`)
-      .then(r => r.json())
-      .then(strips => renderGallery(strips))
-      .catch(() => { galleryGrid.innerHTML = '<p class="hint">Could not load saved photostrips.</p>'; });
+  // --- Lightbox ---
+  function openLightbox(src) {
+    lightboxImg.src = src;
+    lightbox.classList.add('open');
   }
 
-  function renderGallery(strips) {
-    if (!strips.length) {
-      galleryGrid.innerHTML = '<p class="hint">No saved photostrips yet.</p>';
-      return;
-    }
-    galleryGrid.innerHTML = strips.map(s => {
-      const date = new Date(s.timestamp).toLocaleString();
-      return `
-        <div class="gallery-card">
-          <img src="${s.dataUrl}" alt="Photostrip from ${date}">
-          <div class="gallery-date">${date}</div>
-          <div class="gallery-actions">
-            <a class="gallery-download" href="${s.dataUrl}" download="photostrip-${s.id}.png">Download</a>
-            <button class="gallery-delete" onclick="deleteStrip('${s.id}')">Delete</button>
-          </div>
+  function closeLightbox() {
+    lightbox.classList.remove('open');
+    lightboxImg.src = '';
+  }
+
+  document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
+  lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
+
+  // --- Gallery ---
+  function galleryCardHTML(s) {
+    const date = new Date(s.timestamp).toLocaleString();
+    return `
+      <div class="gallery-card">
+        <img src="${s.dataUrl}" alt="Photostrip from ${date}" onclick="openLightbox('${s.dataUrl}')">
+        <div class="gallery-date">${date}</div>
+        <div class="gallery-actions">
+          <a class="gallery-download" href="${s.dataUrl}" download="photostrip-${s.id}.png">Download</a>
+          <button class="gallery-delete" onclick="deleteStrip('${s.id}')">Delete</button>
         </div>
-      `;
-    }).join('');
+      </div>
+    `;
+  }
+
+  function loadGallery() {
+    const empty = '<p class="hint">Loading your memories...</p>';
+    galleryGrid.innerHTML = empty;
+    stripGalleryGrid.innerHTML = empty;
+
+    fetch(`${HTTP_URL}/strips`)
+      .then(r => r.json())
+      .then(strips => {
+        if (!strips.length) {
+          const msg = '<p class="hint">No saved photostrips yet.</p>';
+          galleryGrid.innerHTML = msg;
+          stripGalleryGrid.innerHTML = msg;
+          return;
+        }
+        const html = strips.map(galleryCardHTML).join('');
+        galleryGrid.innerHTML = html;
+        stripGalleryGrid.innerHTML = html;
+      })
+      .catch(() => {
+        const msg = '<p class="hint">Could not load saved photostrips.</p>';
+        galleryGrid.innerHTML = msg;
+        stripGalleryGrid.innerHTML = msg;
+      });
   }
 
   function deleteStrip(id) {
     fetch(`${HTTP_URL}/strips/${id}`, { method: 'DELETE' }).then(() => loadGallery());
   }
+
+  // --- Bulk export ---
+  document.getElementById('export-btn').addEventListener('click', () => {
+    const btn = document.getElementById('export-btn');
+    btn.textContent = 'Preparing...';
+    btn.disabled = true;
+
+    fetch(`${HTTP_URL}/strips/export`)
+      .then(r => r.json())
+      .then(data => {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `photobooth-backup-${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        btn.textContent = 'Download all (backup)';
+        btn.disabled = false;
+      })
+      .catch(() => {
+        alert('Export failed. Try again.');
+        btn.textContent = 'Download all (backup)';
+        btn.disabled = false;
+      });
+  });
+
+  // --- Bulk import ---
+  document.getElementById('import-input').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!data.strips || !Array.isArray(data.strips)) {
+          alert('Invalid backup file.');
+          return;
+        }
+
+        const confirmed = confirm(`This will import ${data.strips.length} photostrip(s). Your existing strips will not be deleted. Continue?`);
+        if (!confirmed) return;
+
+        const importLabel = document.querySelector('.import-label');
+        importLabel.textContent = 'Importing...';
+
+        const res = await fetch(`${HTTP_URL}/strips/import`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ strips: data.strips })
+        });
+
+        const result = await res.json();
+        importLabel.innerHTML = `Restore from backup <input type="file" id="import-input" accept=".json">`;
+        document.getElementById('import-input').addEventListener('change', arguments.callee.bind(null));
+
+        if (result.imported !== undefined) {
+          alert(`Successfully imported ${result.imported} photostrip(s)!`);
+          loadGallery();
+        } else {
+          alert('Import failed: ' + (result.error || 'unknown error'));
+        }
+      } catch {
+        alert('Could not read backup file.');
+      }
+    };
+    reader.readAsText(file);
+  });
 
   loadGallery();
 
@@ -574,7 +799,6 @@
     myName = document.getElementById('name-input').value.trim() || 'You';
     const room = document.getElementById('room-input').value.trim() || 'ourroom';
 
-    // Camera is required
     try {
       localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
     } catch (e) {
@@ -582,13 +806,12 @@
       return;
     }
 
-    // Microphone is optional — if denied we just continue without it
     try {
       const micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
       micStream.getAudioTracks().forEach(track => localStream.addTrack(track));
       hasMic = true;
       voiceControls.style.display = 'block';
-    } catch (e) {
+    } catch {
       hasMic = false;
       voiceControls.style.display = 'none';
     }
@@ -611,8 +834,12 @@
 
     ws.onerror = () => alert('Could not connect to server. Is it running?');
 
+    // Hide landing page, show booth
     setupScreen.style.display = 'none';
+    landingGallery.style.display = 'none';
     mainApp.style.display = 'block';
+    boothControls.style.display = 'block';
+    stripEditor.style.display = 'none';
   });
 
   micBtn.addEventListener('click', () => {
@@ -627,46 +854,37 @@
         myRole = msg.role;
         if (msg.count === 2) await bothConnected();
         break;
-
       case 'partner_joined':
         partnerName = msg.name || 'Partner';
         await bothConnected();
         await createOffer();
         break;
-
       case 'partner_left':
         statusBar.textContent = 'Partner disconnected. Waiting...';
         startBtn.disabled = true;
         break;
-
       case 'offer':
         await handleOffer(msg.sdp);
         break;
-
       case 'answer':
         await pc.setRemoteDescription({ type: 'answer', sdp: msg.sdp });
         break;
-
       case 'ice':
         if (msg.candidate) await pc.addIceCandidate(msg.candidate);
         break;
-
       case 'countdown_start':
         startBtn.style.display = 'none';
         runCountdown(msg.startAt, msg.slot, msg.chain !== false);
         break;
-
       case 'retake_and_start':
         clearSlot(msg.slot);
         startBtn.style.display = 'none';
         runCountdown(msg.startAt, msg.slot, false);
         break;
-
       case 'remote_photo':
         remotePhotos[msg.slot] = msg.dataUrl;
         checkSlotMerge(msg.slot);
         break;
-
       case 'strip_update':
         if (msg.field === 'caption') {
           captionInput.value = msg.value;
@@ -678,7 +896,6 @@
         }
         renderStrip();
         break;
-
       case 'restart_session':
         resetSessionState();
         break;
@@ -772,8 +989,6 @@
     ws.send(JSON.stringify({ type: 'remote_photo', slot, dataUrl }));
     checkSlotMerge(slot);
 
-    // After a retake (chained=false), check if there are later slots still empty
-    // and auto-chain into them; otherwise the session would stall
     if (sessionDriver && !chained) {
       const nextEmpty = photos.findIndex((p, i) => i > slot && p === null);
       if (nextEmpty !== -1) {
@@ -782,7 +997,6 @@
           triggerCountdown(nextEmpty, false);
         }, 2000);
       }
-      // If no empty slots remain, checkSlotMerge will handle moving to the strip
       return;
     }
 
@@ -859,6 +1073,7 @@
   function showStrip() {
     boothControls.style.display = 'none';
     stripEditor.style.display = 'block';
+    loadGallery();
     renderStrip();
   }
 
@@ -983,7 +1198,10 @@
       body: JSON.stringify({ dataUrl: stripCanvas.toDataURL('image/png') })
     })
       .then(r => r.json())
-      .then(() => { saveStatus.textContent = 'Saved to your gallery ✓'; loadGallery(); })
+      .then(() => {
+        saveStatus.textContent = 'Saved to your gallery ✓';
+        loadGallery();
+      })
       .catch(() => { saveStatus.textContent = 'Could not save. Try again.'; });
   });
 
