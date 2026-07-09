@@ -47,11 +47,20 @@ async function insertStrip(imageUrl) {
 }
 
 async function fetchStrips() {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/strips?select=*&order=created_at.desc`, {
-    headers: supabaseHeaders()
+  const url = `${SUPABASE_URL}/rest/v1/strips?select=id,image_url,created_at&order=created_at.desc`;
+  console.log('Fetching from:', url);
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Accept': 'application/json'
+    }
   });
-  if (!res.ok) throw new Error(`DB fetch failed: ${await res.text()}`);
-  return res.json();
+  const text = await res.text();
+  console.log('Supabase response:', text);
+  if (!res.ok) throw new Error(`DB fetch failed: ${text}`);
+  return JSON.parse(text);
 }
 
 async function deleteStrip(id) {
