@@ -15,7 +15,6 @@ wss.on('connection', (ws) => {
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
 
-    // Clock sync handshake - reply directly, don't broadcast
     if (msg.type === 'sync') {
       ws.send(JSON.stringify({ type: 'sync_reply', t0: msg.t0, serverTime: Date.now() }));
       return;
@@ -27,8 +26,6 @@ wss.on('connection', (ws) => {
       if (!rooms[msg.room]) rooms[msg.room] = [];
       rooms[msg.room].push(ws);
 
-      // First person to join = 'left', second = 'right'.
-      // This keeps photo placement consistent on both screens.
       const idx = rooms[msg.room].indexOf(ws);
       ws.role = idx === 0 ? 'left' : 'right';
 
@@ -42,7 +39,6 @@ wss.on('connection', (ws) => {
       return;
     }
 
-    // Everything else (WebRTC signaling, countdown sync, photo data) just gets relayed
     broadcast(ws, msg);
   });
 

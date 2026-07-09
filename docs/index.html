@@ -263,7 +263,6 @@
 
   #strip-canvas {
     width: 100%;
-    border-radius: 16px;
     box-shadow: 0 8px 30px rgba(58, 46, 77, 0.18);
     margin-bottom: 16px;
   }
@@ -345,19 +344,21 @@
 </div>
 
 <script>
-  const SERVER_URL = 'https://photobooth-apqx.onrender.com'; // <-- keep your existing Render URL here
+  const SERVER_URL = 'wss://YOUR-RENDER-URL.onrender.com'; // keep your existing Render URL here
 
   let ws, pc;
   let localStream;
   let myName = '';
   let partnerName = '';
-  let myRole = null;      // 'left' or 'right' - assigned by server, stays consistent
+  let myRole = null;
   let currentSlot = 0;
-  let photos = [null, null, null, null];       // my own captures
-  let remotePhotos = [null, null, null, null]; // partner's captures
-  let mergedPhotos = [null, null, null, null]; // combined preview/strip images
-  let sessionDriver = false; // whoever presses Start/Retake auto-advances the sequence
-  let clockOffset = 0;       // corrects for clock differences between devices
+  let photos = [null, null, null, null];
+  let remotePhotos = [null, null, null, null];
+  let mergedPhotos = [null, null, null, null];
+  let sessionDriver = false;
+  let clockOffset = 0;
+  let activeCountdownInterval = null;
+  let pendingChainTimeout = null;
 
   const ICE_SERVERS = {
     iceServers: [
@@ -385,8 +386,6 @@
 
   function getServerNow() { return Date.now() + clockOffset; }
 
-  // --- Clock sync: figures out the time difference between this device and the server,
-  // so both partners' countdowns are anchored to the same clock instead of drifting apart.
   function syncClock(rounds = 5) {
     return new Promise((resolve) => {
       let best = null;
@@ -495,7 +494,7 @@
   }
 
   async function bothConnected() {
-    statusBar.innerHTML = `Connected with <strong>${partnerName || 'partner'}</strong> \u2713`;
+    statusBar.innerHTML = `Connected with <strong>${partnerName || 'partner'}</strong> ✓`;
     startBtn.disabled = false;
     startBtn.textContent = 'Start photo session';
     remoteLabel.textContent = partnerName || 'Partner';
@@ -523,7 +522,6 @@
     ws.send(JSON.stringify({ type: 'answer', sdp: answer.sdp }));
   }
 
-  // --- Starting the session: press once, then all 4 photos happen automatically ---
   startBtn.addEventListener('click', () => {
     sessionDriver = true;
     startBtn.style.display = 'none';
@@ -531,23 +529,35 @@
   });
 
   function triggerCountdown(slot, chained) {
-    const startAt = getServerNow() + 10000; // 10 second countdown
+    const startAt = getServerNow() + 10000;
     ws.send(JSON.stringify({ type: 'countdown_start', startAt, slot, chain: chained }));
     runCountdown(startAt, slot, chained);
   }
 
   function runCountdown(startAt, slot, chained) {
+    // Cancel any countdown already running so retakes never collide
+    if (activeCountdownInterval) {
+      clearInterval(activeCountdownInterval);
+      activeCountdownInterval = null;
+    }
+    // Cancel any pending auto-chain that hasn't fired yet
+    if (pendingChainTimeout) {
+      clearTimeout(pendingChainTimeout);
+      pendingChainTimeout = null;
+    }
+
     currentSlot = slot;
     updateSlotHighlight();
     localCountdown.classList.add('visible');
     remoteCountdown.classList.add('visible');
 
     let lastShown = null;
-    const interval = setInterval(() => {
+    activeCountdownInterval = setInterval(() => {
       const remaining = Math.ceil((startAt - getServerNow()) / 1000);
 
       if (remaining <= 0) {
-        clearInterval(interval);
+        clearInterval(activeCountdownInterval);
+        activeCountdownInterval = null;
         localCountdown.classList.remove('visible');
         remoteCountdown.classList.remove('visible');
         bigCountdown.classList.remove('visible');
@@ -556,7 +566,6 @@
         lastShown = remaining;
         localCountdown.textContent = remaining;
         remoteCountdown.textContent = remaining;
-        // re-trigger the pulse animation and shared big countdown each second
         [localCountdown, remoteCountdown].forEach(el => {
           el.classList.remove('visible'); void el.offsetWidth; el.classList.add('visible');
         });
@@ -578,7 +587,10 @@
     checkSlotMerge(slot);
 
     if (sessionDriver && chained && slot < 3) {
-      setTimeout(() => triggerCountdown(slot + 1, true), 2000); // brief pause before the next countdown
+      pendingChainTimeout = setTimeout(() => {
+        pendingChainTimeout = null;
+        triggerCountdown(slot + 1, true);
+      }, 2000);
     }
   }
 
@@ -591,6 +603,10 @@
 
   function retakeSlot(slot) {
     sessionDriver = true;
+    if (pendingChainTimeout) {
+      clearTimeout(pendingChainTimeout);
+      pendingChainTimeout = null;
+    }
     clearSlot(slot);
     const startAt = getServerNow() + 10000;
     ws.send(JSON.stringify({ type: 'retake_and_start', slot, startAt }));
@@ -604,7 +620,6 @@
     }
   }
 
-  // --- Merge both partners' photos into a single combined preview once both arrive ---
   function checkSlotMerge(slot) {
     if (photos[slot] && remotePhotos[slot]) {
       mergeImages(photos[slot], remotePhotos[slot]).then((url) => {
@@ -644,7 +659,6 @@
     });
   }
 
-  // --- Final strip ---
   let borderColor = '#f0e9ff';
 
   function showStrip() {
@@ -655,7 +669,7 @@
 
   async function renderStrip() {
     const W = 560, BORDER = 26, ROW_GAP = 8;
-    const frameW = (W - BORDER * 2) / 2; // no gap between left/right in a row
+    const frameW = (W - BORDER * 2) / 2;
     const frameH = frameW * 1.28;
     const captionH = 70;
     const H = BORDER + (frameH + ROW_GAP) * 4 - ROW_GAP + BORDER + captionH;
@@ -682,16 +696,17 @@
     for (let i = 0; i < 4; i++) {
       const y = BORDER + i * (frameH + ROW_GAP);
 
+      // No rounded corners — sharp rect clip
       ctx.save();
       ctx.beginPath();
-      ctx.roundRect(BORDER, y, frameW, frameH, 8);
+      ctx.rect(BORDER, y, frameW, frameH);
       ctx.clip();
       ctx.drawImage(leftImgs[i], BORDER, y, frameW, frameH);
       ctx.restore();
 
       ctx.save();
       ctx.beginPath();
-      ctx.roundRect(BORDER + frameW, y, frameW, frameH, 8);
+      ctx.rect(BORDER + frameW, y, frameW, frameH);
       ctx.clip();
       ctx.drawImage(rightImgs[i], BORDER + frameW, y, frameW, frameH);
       ctx.restore();
@@ -703,7 +718,8 @@
       ctx.fillStyle = borderColor === '#3a2e4d' ? '#ffffff' : '#3a2e4d';
       ctx.font = "700 32px 'Caveat', cursive";
       ctx.textAlign = 'center';
-      ctx.fillText(caption, W / 2, H - BORDER + 20);
+      // Moved up closer to the photos
+      ctx.fillText(caption, W / 2, H - BORDER + 8);
     }
 
     ctx.fillStyle = borderColor === '#3a2e4d' ? 'rgba(255,255,255,0.5)' : 'rgba(58,46,77,0.4)';
