@@ -9,7 +9,9 @@ function supabaseHeaders() {
   return {
     'apikey': SUPABASE_KEY,
     'Authorization': `Bearer ${SUPABASE_KEY}`,
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'Accept-Profile': 'public',
+    'Content-Profile': 'public'
   };
 }
 
