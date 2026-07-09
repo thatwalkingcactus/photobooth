@@ -11,37 +11,45 @@ const wss = new WebSocketServer({ server });
 const rooms = {};
 
 wss.on('connection', (ws) => {
-  console.log('Someone connected');
-
   ws.on('message', (raw) => {
-    const msg = JSON.parse(raw);
+    let msg;
+    try { msg = JSON.parse(raw); } catch { return; }
+
+    // Clock sync handshake - reply directly, don't broadcast
+    if (msg.type === 'sync') {
+      ws.send(JSON.stringify({ type: 'sync_reply', t0: msg.t0, serverTime: Date.now() }));
+      return;
+    }
 
     if (msg.type === 'join') {
       ws.room = msg.room;
       ws.name = msg.name;
       if (!rooms[msg.room]) rooms[msg.room] = [];
       rooms[msg.room].push(ws);
-      console.log(`${msg.name} joined room: ${msg.room}`);
 
-      // Tell them how many people are in the room
+      // First person to join = 'left', second = 'right'.
+      // This keeps photo placement consistent on both screens.
+      const idx = rooms[msg.room].indexOf(ws);
+      ws.role = idx === 0 ? 'left' : 'right';
+
       ws.send(JSON.stringify({
         type: 'room_info',
-        count: rooms[msg.room].length
+        count: rooms[msg.room].length,
+        role: ws.role
       }));
 
-      // Notify the other person
-      broadcast(ws, { type: 'partner_joined' });
-    } else {
-      // Forward everything else to the other person
-      broadcast(ws, msg);
+      broadcast(ws, { type: 'partner_joined', name: msg.name, role: ws.role });
+      return;
     }
+
+    // Everything else (WebRTC signaling, countdown sync, photo data) just gets relayed
+    broadcast(ws, msg);
   });
 
   ws.on('close', () => {
     if (ws.room && rooms[ws.room]) {
       rooms[ws.room] = rooms[ws.room].filter(p => p !== ws);
       broadcast(ws, { type: 'partner_left' });
-      console.log(`${ws.name} left room: ${ws.room}`);
     }
   });
 });
