@@ -978,35 +978,37 @@
     }, 100);
   }
 
-  function capturePhoto(slot, chained) {
-    const canvas = document.createElement('canvas');
-    canvas.width = localVideo.videoWidth;
-    canvas.height = localVideo.videoHeight;
-    canvas.getContext('2d').drawImage(localVideo, 0, 0);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+function capturePhoto(slot, chained) {
+  const canvas = document.createElement('canvas');
+  // Use the full native camera resolution
+  canvas.width = localVideo.videoWidth;
+  canvas.height = localVideo.videoHeight;
+  canvas.getContext('2d').drawImage(localVideo, 0, 0);
+  // PNG capture — lossless, no JPEG artifacts
+  const dataUrl = canvas.toDataURL('image/png');
 
-    photos[slot] = dataUrl;
-    ws.send(JSON.stringify({ type: 'remote_photo', slot, dataUrl }));
-    checkSlotMerge(slot);
+  photos[slot] = dataUrl;
+  ws.send(JSON.stringify({ type: 'remote_photo', slot, dataUrl }));
+  checkSlotMerge(slot);
 
-    if (sessionDriver && !chained) {
-      const nextEmpty = photos.findIndex((p, i) => i > slot && p === null);
-      if (nextEmpty !== -1) {
-        pendingChainTimeout = setTimeout(() => {
-          pendingChainTimeout = null;
-          triggerCountdown(nextEmpty, false);
-        }, 2000);
-      }
-      return;
-    }
-
-    if (sessionDriver && chained && slot < 3) {
+  if (sessionDriver && !chained) {
+    const nextEmpty = photos.findIndex((p, i) => i > slot && p === null);
+    if (nextEmpty !== -1) {
       pendingChainTimeout = setTimeout(() => {
         pendingChainTimeout = null;
-        triggerCountdown(slot + 1, true);
+        triggerCountdown(nextEmpty, false);
       }, 2000);
     }
+    return;
   }
+
+  if (sessionDriver && chained && slot < 3) {
+    pendingChainTimeout = setTimeout(() => {
+      pendingChainTimeout = null;
+      triggerCountdown(slot + 1, true);
+    }, 2000);
+  }
+}
 
   function clearSlot(slot) {
     photos[slot] = null;
@@ -1044,31 +1046,34 @@
     }
   }
 
-  function mergeImages(myDataUrl, theirDataUrl) {
-    return new Promise((resolve) => {
-      const myImg = new Image();
-      const theirImg = new Image();
-      let loaded = 0;
-      function onLoad() {
-        loaded++;
-        if (loaded < 2) return;
-        const w = 320, h = 420;
-        const canvas = document.createElement('canvas');
-        canvas.width = w * 2;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        const leftImg = myRole === 'left' ? myImg : theirImg;
-        const rightImg = myRole === 'left' ? theirImg : myImg;
-        ctx.drawImage(leftImg, 0, 0, w, h);
-        ctx.drawImage(rightImg, w, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', 0.85));
-      }
-      myImg.onload = onLoad;
-      theirImg.onload = onLoad;
-      myImg.src = myDataUrl;
-      theirImg.src = theirDataUrl;
-    });
-  }
+function mergeImages(myDataUrl, theirDataUrl) {
+  return new Promise((resolve) => {
+    const myImg = new Image();
+    const theirImg = new Image();
+    let loaded = 0;
+    function onLoad() {
+      loaded++;
+      if (loaded < 2) return;
+      // Use the actual captured resolution instead of a fixed small size
+      const w = Math.max(myImg.naturalWidth, theirImg.naturalWidth, 720);
+      const h = Math.max(myImg.naturalHeight, theirImg.naturalHeight, 960);
+      const canvas = document.createElement('canvas');
+      canvas.width = w * 2;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      const leftImg = myRole === 'left' ? myImg : theirImg;
+      const rightImg = myRole === 'left' ? theirImg : myImg;
+      ctx.drawImage(leftImg, 0, 0, w, h);
+      ctx.drawImage(rightImg, w, 0, w, h);
+      // PNG instead of JPEG so thumbnails stay sharp
+      resolve(canvas.toDataURL('image/png'));
+    }
+    myImg.onload = onLoad;
+    theirImg.onload = onLoad;
+    myImg.src = myDataUrl;
+    theirImg.src = theirDataUrl;
+  });
+}
 
   function showStrip() {
     boothControls.style.display = 'none';
@@ -1103,66 +1108,68 @@
     saveStatus.textContent = '';
   }
 
-  async function renderStrip() {
-    const W = 560, BORDER = 26, ROW_GAP = 8;
-    const frameW = (W - BORDER * 2) / 2;
-    const frameH = frameW * 1.28;
-    const captionH = 70;
-    const H = BORDER + (frameH + ROW_GAP) * 4 - ROW_GAP + BORDER + captionH;
+async function renderStrip() {
+  const SCALE = 2; // render at 2x then display at 1x for sharpness
+  const W = 560 * SCALE, BORDER = 26 * SCALE, ROW_GAP = 8 * SCALE;
+  const frameW = (W - BORDER * 2) / 2;
+  const frameH = frameW * 1.28;
+  const captionH = 70 * SCALE;
+  const H = BORDER + (frameH + ROW_GAP) * 4 - ROW_GAP + BORDER + captionH;
 
-    stripCanvas.width = W;
-    stripCanvas.height = H;
-    const ctx = stripCanvas.getContext('2d');
+  stripCanvas.width = W;
+  stripCanvas.height = H;
+  stripCanvas.style.width = '100%'; // display at CSS width, render at 2x
+  const ctx = stripCanvas.getContext('2d');
 
-    ctx.fillStyle = borderColor;
-    ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = borderColor;
+  ctx.fillRect(0, 0, W, H);
 
-    const loadImage = (src) => new Promise(res => {
-      const img = new Image();
-      img.onload = () => res(img);
-      img.src = src;
-    });
+  const loadImage = (src) => new Promise(res => {
+    const img = new Image();
+    img.onload = () => res(img);
+    img.src = src;
+  });
 
-    const leftSrcs = myRole === 'left' ? photos : remotePhotos;
-    const rightSrcs = myRole === 'left' ? remotePhotos : photos;
+  const leftSrcs = myRole === 'left' ? photos : remotePhotos;
+  const rightSrcs = myRole === 'left' ? remotePhotos : photos;
 
-    if (leftSrcs.some(s => !s) || rightSrcs.some(s => !s)) return;
+  if (leftSrcs.some(s => !s) || rightSrcs.some(s => !s)) return;
 
-    const leftImgs = await Promise.all(leftSrcs.map(loadImage));
-    const rightImgs = await Promise.all(rightSrcs.map(loadImage));
+  const leftImgs = await Promise.all(leftSrcs.map(loadImage));
+  const rightImgs = await Promise.all(rightSrcs.map(loadImage));
 
-    for (let i = 0; i < 4; i++) {
-      const y = BORDER + i * (frameH + ROW_GAP);
+  for (let i = 0; i < 4; i++) {
+    const y = BORDER + i * (frameH + ROW_GAP);
 
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(BORDER, y, frameW, frameH);
-      ctx.clip();
-      ctx.drawImage(leftImgs[i], BORDER, y, frameW, frameH);
-      ctx.restore();
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(BORDER, y, frameW, frameH);
+    ctx.clip();
+    ctx.drawImage(leftImgs[i], BORDER, y, frameW, frameH);
+    ctx.restore();
 
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(BORDER + frameW, y, frameW, frameH);
-      ctx.clip();
-      ctx.drawImage(rightImgs[i], BORDER + frameW, y, frameW, frameH);
-      ctx.restore();
-    }
-
-    await document.fonts.load("32px 'Caveat'");
-    const caption = captionInput.value || '';
-    if (caption) {
-      ctx.fillStyle = borderColor === '#3a2e4d' ? '#ffffff' : '#3a2e4d';
-      ctx.font = "700 32px 'Caveat', cursive";
-      ctx.textAlign = 'center';
-      ctx.fillText(caption, W / 2, H - BORDER + 8);
-    }
-
-    ctx.fillStyle = borderColor === '#3a2e4d' ? 'rgba(255,255,255,0.5)' : 'rgba(58,46,77,0.4)';
-    ctx.font = '600 12px Quicksand, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(new Date().toLocaleDateString(), W / 2, H - 10);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(BORDER + frameW, y, frameW, frameH);
+    ctx.clip();
+    ctx.drawImage(rightImgs[i], BORDER + frameW, y, frameW, frameH);
+    ctx.restore();
   }
+
+  await document.fonts.load(`${32 * SCALE}px 'Caveat'`);
+  const caption = captionInput.value || '';
+  if (caption) {
+    ctx.fillStyle = borderColor === '#3a2e4d' ? '#ffffff' : '#3a2e4d';
+    ctx.font = `700 ${32 * SCALE}px 'Caveat', cursive`;
+    ctx.textAlign = 'center';
+    ctx.fillText(caption, W / 2, H - BORDER + 8 * SCALE);
+  }
+
+  ctx.fillStyle = borderColor === '#3a2e4d' ? 'rgba(255,255,255,0.5)' : 'rgba(58,46,77,0.4)';
+  ctx.font = `600 ${12 * SCALE}px Quicksand, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText(new Date().toLocaleDateString(), W / 2, H - 10 * SCALE);
+}
 
   captionInput.addEventListener('input', () => {
     renderStrip();
