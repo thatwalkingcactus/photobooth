@@ -15,7 +15,6 @@ function supabaseHeaders() {
   };
 }
 
-// Upload image to Supabase Storage, returns public URL
 async function uploadImage(base64DataUrl) {
   const base64 = base64DataUrl.split(',')[1];
   const buffer = Buffer.from(base64, 'base64');
@@ -33,11 +32,9 @@ async function uploadImage(base64DataUrl) {
   });
 
   if (!res.ok) throw new Error(`Storage upload failed: ${await res.text()}`);
-
   return `${SUPABASE_URL}/storage/v1/object/public/strips/${filename}`;
 }
 
-// Insert a row into the strips table
 async function insertStrip(imageUrl) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/strips`, {
     method: 'POST',
@@ -49,7 +46,6 @@ async function insertStrip(imageUrl) {
   return rows[0];
 }
 
-// Fetch all strips ordered by newest first
 async function fetchStrips() {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/strips?select=*&order=created_at.desc`, {
     headers: supabaseHeaders()
@@ -58,9 +54,7 @@ async function fetchStrips() {
   return res.json();
 }
 
-// Delete a strip row and its image file
 async function deleteStrip(id) {
-  // Get the row first so we know the filename
   const res = await fetch(`${SUPABASE_URL}/rest/v1/strips?id=eq.${id}&select=image_url`, {
     headers: supabaseHeaders()
   });
@@ -72,7 +66,6 @@ async function deleteStrip(id) {
       headers: supabaseHeaders()
     });
   }
-
   await fetch(`${SUPABASE_URL}/rest/v1/strips?id=eq.${id}`, {
     method: 'DELETE',
     headers: supabaseHeaders()
@@ -90,6 +83,7 @@ function sendJSON(res, status, data) {
 }
 
 const server = http.createServer((req, res) => {
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
@@ -100,6 +94,17 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Debug endpoint
+  if (req.url === '/debug' && req.method === 'GET') {
+    sendJSON(res, 200, {
+      hasUrl: !!SUPABASE_URL,
+      hasKey: !!SUPABASE_KEY,
+      urlStart: SUPABASE_URL ? SUPABASE_URL.substring(0, 30) : 'missing'
+    });
+    return;
+  }
+
+  // GET /strips
   if (req.url === '/strips' && req.method === 'GET') {
     fetchStrips()
       .then(strips => sendJSON(res, 200, strips.map(s => ({
@@ -107,10 +112,11 @@ const server = http.createServer((req, res) => {
         dataUrl: s.image_url,
         timestamp: new Date(s.created_at).getTime()
       }))))
-      .catch(e => sendJSON(res, 500, { error: e.message }));
+      .catch(e => { console.error(e); sendJSON(res, 500, { error: e.message }); });
     return;
   }
 
+  // POST /strips
   if (req.url === '/strips' && req.method === 'POST') {
     let body = '';
     req.on('data', chunk => { body += chunk; });
@@ -126,29 +132,24 @@ const server = http.createServer((req, res) => {
           timestamp: new Date(strip.created_at).getTime()
         });
       } catch (e) {
+        console.error(e);
         sendJSON(res, 500, { error: e.message });
       }
     });
     return;
   }
 
+  // DELETE /strips/:id
   if (req.url.startsWith('/strips/') && req.method === 'DELETE') {
     const id = req.url.split('/strips/')[1];
     deleteStrip(id)
       .then(() => sendJSON(res, 200, { deleted: id }))
-      .catch(e => sendJSON(res, 500, { error: e.message }));
+      .catch(e => { console.error(e); sendJSON(res, 500, { error: e.message }); });
     return;
   }
 
+  // Health check
   res.writeHead(200, { 'Access-Control-Allow-Origin': '*' });
-  if (req.url === '/debug' && req.method === 'GET') {
-  sendJSON(res, 200, {
-    hasUrl: !!SUPABASE_URL,
-    hasKey: !!SUPABASE_KEY,
-    urlStart: SUPABASE_URL ? SUPABASE_URL.substring(0, 20) : 'missing'
-  });
-  return;
-}
   res.end('Photobooth server running');
 });
 
