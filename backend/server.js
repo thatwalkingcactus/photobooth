@@ -141,6 +141,14 @@ const server = http.createServer((req, res) => {
   }
 
   res.writeHead(200, { 'Access-Control-Allow-Origin': '*' });
+  if (req.url === '/debug' && req.method === 'GET') {
+  sendJSON(res, 200, {
+    hasUrl: !!SUPABASE_URL,
+    hasKey: !!SUPABASE_KEY,
+    urlStart: SUPABASE_URL ? SUPABASE_URL.substring(0, 20) : 'missing'
+  });
+  return;
+}
   res.end('Photobooth server running');
 });
 
